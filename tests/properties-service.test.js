@@ -3,6 +3,7 @@ var expect = require('chai').expect;
 const rewire = require('rewire');
 var axios = require('axios');
 var MockAdapter = require('axios-mock-adapter');
+var sinon = require('sinon');
 
 var service = rewire('./../service/properties-service')
 const {Property} = require('node-js-properties-model');
@@ -16,6 +17,8 @@ var url = `http://localhost:3001/api/v1/property_listings.js?api_key=key&country
 var mock = new MockAdapter(axios);
 
 mock.onGet(url+'1').reply(200, { "result_count": 300,
+                                 "longitude": 50,
+                                 "latitude": 12,
                                  "listing": [
                                               {
                                                 "listing_id": "111111",
@@ -41,7 +44,7 @@ mock.onGet(url+'1').reply(200, { "result_count": 300,
                                               });
 
 beforeEach((done) => {
-  Property.remove({ listingId: { $in: ['111111','222222','33333'] } }).then(() => {
+  Property.remove({ listingId: { $in: ['111111','222222','33333', 'testAddPropery'] } }).then(() => {
     return;
   }).then(() => done());
 });
@@ -61,7 +64,9 @@ describe('Properties Service', () => {
   it('Fetches Property Listing Meta', (done) => {
     service.fetchZooplaPropertiesMeta(url)
       .then((data) => {
-        assert.equal(data, 3);
+        assert.equal(data.pageCount, 3);
+        assert.equal(data.latitude, 12);
+        assert.equal(data.longitude, 50);
         done();
       }).catch((e) => done(e));
   });
@@ -77,6 +82,22 @@ describe('Properties Service', () => {
             assert.equal(data.length, 3);
         });
         done();
+      }).catch((e) => done(e));
+  });
+
+  it('Should add a property to mongodb', (done) => {
+    var propertyData = {
+      "listingId": "testAddPropery",
+      "price": 999
+    };
+    service.addProperty(propertyData)
+      .then((data) => {
+          assert.equal(data.listingId, "testAddPropery");
+          Property.find({ listingId: { $in: ['testAddPropery'] } })
+            .then((data) => {
+              assert.equal(data.length, 1);
+          });
+          done();
       }).catch((e) => done(e));
   });
 

@@ -51,7 +51,7 @@ var zooplaImport = () => {
   return fetchZooplaPropertiesMeta(url)
     .then((result) => {
       //console.log('pageSize', result);
-      return fetchAllZooplaProperties(url, result);
+      return fetchAllZooplaProperties(url, result.pageCount);
     })
     .then((propertyList) => {
         //console.log('saving propertyList to db');
@@ -75,8 +75,14 @@ var fetchZooplaProperties = (url) => {
 var fetchZooplaPropertiesMeta = (url) => {
     return fetchZooplaProperties(url+'1')
       .then((response) => {
-        dataSize = response.data.result_count;
-        return(Math.ceil(dataSize/pageSize));
+        pageCount = Math.ceil(response.data.result_count/pageSize);
+        latitude = response.data.latitude;
+        longitude = response.data.longitude;
+        return({
+          pageCount,
+          latitude,
+          longitude
+        });
       });
 }
 
@@ -123,7 +129,7 @@ var getPropertyListing = (id) => {
   }
   return Property.findById(id).then((property) => {
     if(!property) {
-      return;
+      return null;
     }
     return property;
   });
@@ -164,7 +170,14 @@ var deleteProperty = (id) => {
   }
 };
 
+var deleteAllProperties = () => {
+  return Property.remove({}).then(() => {
+    return;
+  });
+}
+
 module.exports = {
+  deleteAllProperties,
   fetchZooplaPropertiesMeta,
   zooplaImportPageOne,
   deleteProperty,
